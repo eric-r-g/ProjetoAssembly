@@ -1,0 +1,14 @@
+* merge
+
+$s0: arr
+$s1: ini
+$s2: meio
+$s3: fim
+$s4: n1
+$s5: n2
+$s6: esq
+$s7: dir
+
+$t0: i
+$t1: j
+$t2: k
