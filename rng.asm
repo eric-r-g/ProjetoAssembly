@@ -47,7 +47,7 @@ gerador:
     mul $t1, $s0, $s1
     add $t1, $t1, $s2
     div $t1, $s3         
-    mfhi $s0		# essa conta é basicamente (ax + b)       
+    mfhi $s0		# essa conta é basicamente (ax + b) % m
     
     # garantindo um valor positivo (pode dar negativo por causa de overflow) com um AND em uma máscara de 31 bits (01111111...1)
     li $t6, 0x7FFFFFFF   
