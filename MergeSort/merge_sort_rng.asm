@@ -3,7 +3,20 @@
     msg1: .asciiz "Quantos números deseja ordenar? "
     msg2: .asciiz "Digite um número: "
     msg3: .asciiz "Array ordenado:\n"
+    msg4: .asciiz "Quer inserir os valores manualmente (input 0) ou gerar um vetor aleatório? (input numérico qualquer): "
+    msg5: .asciiz "Array original: \n"
     space: .asciiz " "
+    
+    seed:       .word 0       # Semente inicial (pode ser qualquer valor)
+    multiplicador: .word 1103515245  # Multiplicador (a)
+    incremento:  .word 1       # Incremento (c)
+    modulo:    .word 2147483648  # Módulo (m) - geralmente uma potência de 2
+
+    prompt:     .asciiz "Quantos números aleatórios deseja gerar? "
+    resultado:     .asciiz "Número gerado: "
+    teto:	    .asciiz "Qual o valor máximo desejado? "
+    newline:    .asciiz "\n"
+
 
 
 .globl init
@@ -17,21 +30,73 @@ init:
 
     li $v0, 5
     syscall
-
-    move $s0, $v0
+    move $s0, $v0	# s0 = tamanho do array
 
     mul $t0, $s0, 4
 
-    li $v0, 9
+    li $v0, 9		# aloca memória pro array
     move $a0, $t0
     syscall
 
-    move $s1, $v0
+    move $s1, $v0	# s1 = v[0]
+    
+    li $v0, 4
+    la $a0, msg4
+    syscall
+    
+    li $v0, 5
+    syscall
+    move $s2, $v0	#s2 = 0 ou 1 
+    
+    li $t0, 0		# contador para percorrer o vetor
+    beqz $s2, scan_array
 
-    li $t0, 0
+rng:
+    li $v0, 30
+    syscall
+    sw $a0, seed
+   
+    li $v0, 4
+    la $a0, teto
+    syscall		
+    
+    li $v0, 5
+    syscall
+    move $t7, $v0        # $t7 = teto dos números gerados (máximo possível) *obs: minimo é sempre 0
+    
+    lw $s3, seed        
+    lw $s4, multiplicador  
+    lw $s5, incremento   
+    lw $s6, modulo 
+ 
+gerador:
+    beq $t0, $s0, end_array
+    
+    			# aplicando LCG (Linear congruential generator) para calcular o numero aleatorio
+    mul $t1, $s3, $s4
+    add $t1, $t1, $s5
+    div $t1, $s6        
+    mfhi $s3		# essa conta é basicamente (ax + b)       
+    
+   			# garantindo um valor positivo (pode dar negativo por causa de overflow) com um AND em uma máscara de 31 bits (01111111...1)
+    li $t6, 0x7FFFFFFF
+    and $s3, $t1, $t6
+    
+    			# reduzindo o valor para o teto dado pelo input
+    div $s3, $t7
+    mfhi $s3
 
+    mul $t1, $t0, 4
+    add $t1, $s1, $t1	# calcula posicao atual (t1) baseado no contador (t0) e no v[0] (s1)
+    
+    sw $s3, 0($t1)
+    
+    addi $t0, $t0, 1
+    j gerador
+    
+    
 scan_array:
-    beq $t0, $s0, end_scan_array
+    beq $t0, $s0, end_array
 
     li $v0, 4
     la $a0, msg2
@@ -48,8 +113,16 @@ scan_array:
     addi $t0, $t0, 1
 
     j scan_array
-end_scan_array:
+    
+end_array:
 
+    li $v0, 4
+    la $a0, msg5
+    syscall
+
+    li $t0, 0
+    jal print_array
+    
     move $a0, $s1
     move $a1, $s0
     jal merge_sort
@@ -59,6 +132,10 @@ end_scan_array:
     syscall
 
     li $t0, 0
+    jal print_array
+    
+    li $v0, 10
+    syscall
 
 print_array:
     beq $t0, $s0, end_print_array
@@ -78,9 +155,11 @@ print_array:
 
     j print_array
 end_print_array:
-
-    li $v0, 10
+    li $v0, 4
+    la $a0, newline
     syscall
+    
+    jr $ra
 
 merge_sort:
     addi $sp, $sp, -4
