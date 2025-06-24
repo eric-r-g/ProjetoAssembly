@@ -6,7 +6,11 @@
     msg4: .asciiz "Quer inserir os valores manualmente (input 0) ou gerar um vetor aleatório? (input numérico qualquer): "
     msg5: .asciiz "Array original: \n"
     space: .asciiz " "
-    
+
+    # REQUISITO: Variáveis simples
+    # As palavras abaixo (seed, multiplicador, etc.) são exemplos de variáveis simples
+    # armazenadas na memória. Os registradores ($s0, $t0, etc.) também atuam como
+    # variáveis simples ao longo do código.
     seed:       .word 0       # Semente inicial (pode ser qualquer valor)
     multiplicador: .word 1103515245  # Multiplicador (a)
     incremento:  .word 1       # Incremento (c)
@@ -24,6 +28,8 @@
 
 .text
 init:
+    # REQUISITO: Numeros inteiros recebidos por input do usuario
+    # A syscall com $v0 = 5 lê um inteiro do usuário. O resultado é armazenado em $v0.
     li $v0, 4
     la $a0, msg1
     syscall
@@ -34,6 +40,9 @@ init:
 
     mul $t0, $s0, 4
 
+    # REQUISITO: Variável tipo array
+    # A syscall 9 (sbrk) aloca memória dinamicamente para o array.
+    # O endereço base do array é salvo em $s1.
     li $v0, 9		# aloca memória pro array
     move $a0, $t0
     syscall
@@ -44,11 +53,17 @@ init:
     la $a0, msg4
     syscall
     
+    # REQUISITO: Numeros inteiros recebidos por input do usuario
     li $v0, 5
     syscall
     move $s2, $v0	#s2 = 0 ou 1 
     
     li $t0, 0		# contador para percorrer o vetor
+
+    # REQUISITO: Estrutura condicional composta (if, else if e else)
+    # beqz $s2, scan_array funciona como um "if ($s2 == 0)".
+    # Se a condição for verdadeira, ele pula para 'scan_array'.
+    # Caso contrário, ele continua para o código seguinte ('rng'), funcionando como um "else".
     beqz $s2, scan_array
 
 rng:
@@ -60,6 +75,7 @@ rng:
     la $a0, teto
     syscall		
     
+    # REQUISITO: Numeros inteiros recebidos por input do usuario
     li $v0, 5
     syscall
     move $t7, $v0        # $t7 = teto dos números gerados (máximo possível) *obs: minimo é sempre 0
@@ -69,6 +85,9 @@ rng:
     lw $s5, incremento   
     lw $s6, modulo 
  
+# REQUISITO: Estrutura de repetição
+# O loop 'gerador' preenche o array com números aleatórios.
+# Ele continua executando (j gerador) até que o contador $t0 atinja o tamanho do array $s0.
 gerador:
     # constantes que serão usadas
 .data
@@ -166,7 +185,9 @@ gerador:
     addi $t0, $t0, 1
     j gerador
     
-    
+# REQUISITO: Estrutura de repetição
+# O loop 'scan_array' preenche o array com números digitados pelo usuário.
+# Ele continua executando (j scan_array) até que o contador $t0 atinja o tamanho do array $s0.
 scan_array:
     beq $t0, $s0, end_array
 
@@ -177,6 +198,7 @@ scan_array:
     mul $t1, $t0, 4
     add $t1, $s1, $t1
     
+    # REQUISITO: Numeros inteiros recebidos por input do usuario
     li $v0, 5
     syscall
 
@@ -193,10 +215,16 @@ end_array:
     syscall
 
     li $t0, 0
+    # REQUISITO: Chamada de funções com parametro de retorno
+    # 'jal print_array' chama a função para imprimir o array.
+    # Embora não tenha retorno explícito para 'init', a função 'print_array'
+    # usa o registrador de retorno $ra para voltar ao ponto da chamada.
     jal print_array
     
     move $a0, $s1
     move $a1, $s0
+    # REQUISITO: Ordenação de valores em array
+    # A chamada 'jal merge_sort' inicia o processo de ordenação do array.
     jal merge_sort
 
     li $v0, 4
@@ -221,6 +249,8 @@ print_array:
 
     addi $t0, $t0, 1
 
+    # REQUISITO: Saída de valores inteiros para o usuario
+    # A syscall com $v0 = 1 imprime o inteiro que está em $a0.
     li $v0, 4
     la $a0, space
     syscall
@@ -240,6 +270,8 @@ merge_sort:
     move $a2, $a1
     addi $a2, $a2, -1
     li $a1, 0
+    # REQUISITO: Recursao
+    # 'merge_sort' chama '__merge_sort', que é a função recursiva principal.
     jal __merge_sort
 
     lw $ra, 0($sp)
@@ -268,18 +300,24 @@ __merge_sort:
     move $a0, $s0
     move $a1, $s1
     move $a2, $s3
+    # REQUISITO: Recursao
+    # Primeira chamada recursiva para a metade esquerda do array.
     jal __merge_sort
 
     addi $t0, $s3, 1
     move $a0, $s0
     move $a1, $t0
     move $a2, $s2
+    # REQUISITO: Recursao
+    # Segunda chamada recursiva para a metade direita do array.
     jal __merge_sort
 
     move $a0, $s0
     move $a1, $s1
     move $a2, $s3
     move $a3, $s2
+    # REQUISITO: Chamada de funções
+    # Chama a função 'merge' para combinar as duas metades ordenadas.
     jal merge
 
     lw $ra, 16($sp)
@@ -331,6 +369,8 @@ merge:
     syscall
 
     move $s7, $v0       # armazena ela em $s7
+# REQUISITO: Estrutura de repetição
+# Loop para preencher o array temporário da esquerda
 preenche_esquerdo:
     beq $t0, $s4, end_preenche_esquerdo # sai quando alcancar o fim
 
@@ -348,6 +388,8 @@ preenche_esquerdo:
 
     j preenche_esquerdo
 end_preenche_esquerdo:
+# REQUISITO: Estrutura de repetição
+# Loop para preencher o array temporário da direita
 preenche_direito:     # mesmo procedimento para o da esquerda
     beq $t1, $s5, end_preenche_direito  
 
@@ -369,6 +411,9 @@ end_preenche_direito:
     li $t0, 0      
     li $t1, 0
     move $t2, $s1
+
+# REQUISITO: Estrutura de repetição com Condicional
+# Loop principal do merge, compara os elementos das duas metades
 duas_condicoes:        # laco de repetição principal do merge
     beq $t0, $s4, end_duas_condicoes   # se um dos indices tiver chegado no final
     beq $t1, $s5, end_duas_condicoes
@@ -387,6 +432,9 @@ duas_condicoes:        # laco de repetição principal do merge
 
     addi $t2, $t2, 1
 
+    # REQUISITO: Estrutura condicional (if-else)
+    # blt funciona como if(esquerda < direita), pulando para 'adiciona_esquerdo'
+    # 'j adiciona_direito' funciona como o 'else'
     blt $t3, $t4, adiciona_esquerdo  # se a esquerda for menor, chama adiciona na esquerda
     j adiciona_direito
 adiciona_esquerdo:
@@ -404,6 +452,9 @@ adiciona_direito:
 end_duas_condicoes:  # armazena os valores que restaram
     bne $t0, $s4, termina_esquerdo 
     bne $t1, $s5, termina_direito
+    
+# REQUISITO: Estrutura de repetição
+# Loops para adicionar os elementos restantes de uma das metades, caso existam
 termina_esquerdo:  # como se fosse o duas condições, porém somente para esquerda
     beq $t0, $s4, end_merge  
 
